@@ -1,3 +1,4 @@
 # Simple-Webapps
-Checkout the Ordernames page:
-https://zanderceunen.github.io/Simple-Webapps/Ordernames/
+
+Checkout the Ordernames page [here](https://zanderceunen.github.io/Simple-Webapps/Ordernames/).
+
