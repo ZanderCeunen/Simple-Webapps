@@ -92,6 +92,7 @@
             groupNames.forEach((name, idx) => {
                 if (idx > 0) pdf.addPage();
                 let fontSize = 100;
+                pdf.setFontSize(fontSize);
                 let textWidth = pdf.getTextWidth(name);
                 
                 while (textWidth > pageWidth - 40 && fontSize > 20) {
@@ -99,7 +100,8 @@
                     pdf.setFontSize(fontSize);
                     textWidth = pdf.getTextWidth(name);
                 }
-                pdf.text(name, pageWidth / 2, pageHeight / 2, { align: 'center' });
+                
+                pdf.text(decodeURIComponent(escape(name)), pageWidth / 2, pageHeight / 2, { align: 'center' });
             });
             
             pdf.save('Group_Names.pdf');
@@ -111,7 +113,7 @@
             groupNames.forEach(name => {
                 const paragraph = new docx.Paragraph({
                     children: [new docx.TextRun({
-                        text: name,
+                        text: decodeURIComponent(escape(name)),
                         size: 96,
                         bold: true,
                         break: 1,
