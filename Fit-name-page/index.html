@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #f4f4f4;
+            background: linear-gradient(135deg, #74ebd5, #acb6e5);
             margin: 0;
             padding: 20px;
         }
@@ -16,7 +16,7 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             max-width: 500px;
             margin: auto;
         }
@@ -42,9 +42,15 @@
             color: white;
             border: none;
             cursor: pointer;
+            transition: background 0.3s;
         }
         button:hover {
             background: #0056b3;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: white;
         }
     </style>
 </head>
@@ -59,6 +65,8 @@
         </select>
         <button onclick="generateDocument()">Generate</button>
     </div>
+
+    <div class="footer">Made by Zander</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/6.1.0/docx.min.js"></script>
@@ -101,7 +109,7 @@
                     textWidth = pdf.getTextWidth(name);
                 }
                 
-                pdf.text(decodeURIComponent(escape(name)), pageWidth / 2, pageHeight / 2, { align: 'center' });
+                pdf.text(name, pageWidth / 2, pageHeight / 2, { align: 'center' });
             });
             
             pdf.save('Group_Names.pdf');
@@ -113,7 +121,7 @@
             groupNames.forEach(name => {
                 const paragraph = new docx.Paragraph({
                     children: [new docx.TextRun({
-                        text: decodeURIComponent(escape(name)),
+                        text: name,
                         size: 96,
                         bold: true,
                         break: 1,
