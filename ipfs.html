@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPFS Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    #output {
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      min-height: 200px;
+    }
+    #output img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+    #download-link {
+      display: block;
+      margin-top: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>IPFS Viewer</h1>
+  <div id="controls">
+    <input type="text" id="cid-input" placeholder="Voer CID in..." />
+    <button id="load-btn">Laad</button>
+  </div>
+  <div id="output">Content verschijnt hier...</div>
+  <a id="download-link" href="#" download style="display:none;">Download bestand</a>
+
+  <script>
+    const gateways = [
+      'https://ipfs.io/ipfs/',
+      'https://gateway.pinata.cloud/ipfs/',
+      'https://cloudflare-ipfs.com/ipfs/'
+    ];
+
+    document.getElementById('load-btn').addEventListener('click', () => {
+      const cid = document.getElementById('cid-input').value.trim();
+      if (!cid) return;
+      loadFromGateways(cid);
+    });
+
+    async function loadFromGateways(cid) {
+      const output = document.getElementById('output');
+      const downloadLink = document.getElementById('download-link');
+      output.innerHTML = 'Laden...';
+      downloadLink.style.display = 'none';
+
+      // Probeer parallel en pak de eerste succesvolle
+      const controllers = gateways.map(() => new AbortController());
+      const fetchPromises = gateways.map((gw, i) =>
+        fetch(gw + cid, { signal: controllers[i].signal })
+          .then(response => {
+            if (!response.ok) throw new Error('Niet gevonden');
+            return response.blob().then(blob => ({ blob, contentType: response.headers.get('Content-Type') }));
+          })
+      );
+
+      let result;
+      try {
+        // Promise.any pakt de eerste succesvolle
+        result = await Promise.any(fetchPromises);
+      } catch (e) {
+        output.innerHTML = 'Fout: Kan content niet laden.';
+        return;
+      } finally {
+        // Abort other requests
+        controllers.forEach(ctrl => ctrl.abort());
+      }
+
+      const { blob, contentType } = result;
+      const url = URL.createObjectURL(blob);
+
+      // Toon content
+      if (contentType && contentType.startsWith('image/')) {
+        output.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = url;
+        output.appendChild(img);
+      } else {
+        // lees als tekst
+        const text = await blob.text();
+        output.textContent = text;
+      }
+
+      // Maak download link
+      downloadLink.href = url;
+      downloadLink.download = cid;
+      downloadLink.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
