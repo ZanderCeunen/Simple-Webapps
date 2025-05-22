@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IPFS Viewer</title>
+  <!-- Roboto font -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- PDF.js library voor veilige PDF-weergave -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
@@ -24,7 +25,6 @@
       padding: 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
       min-height: 100vh;
     }
     h1 {
@@ -33,22 +33,34 @@
       color: var(--dark);
       text-align: center;
     }
+    .container {
+      display: flex;
+      flex: 1;
+      gap: 20px;
+    }
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
     #controls {
       display: flex;
-      width: 100%;
       max-width: 600px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       gap: 8px;
     }
     input[type="text"] {
       flex: 1;
-      padding: 10px 12px;
+      padding: 10px;
       border: 1px solid #ccc;
       border-radius: var(--border-radius);
       font-size: 1rem;
       transition: border-color var(--transition);
     }
-    input[type="text"]:focus { outline: none; border-color: var(--primary); }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
     button {
       padding: 10px 16px;
       border: none;
@@ -59,19 +71,19 @@
       cursor: pointer;
       transition: background var(--transition);
     }
-    button:hover:not(:disabled) { background: #357abd; }
+    button:hover:not(:disabled) {
+      background: #357abd;
+    }
     button:disabled {
       background: #9bbde8;
       cursor: not-allowed;
     }
     #output {
-      width: 100%;
-      max-width: 600px;
+      flex: 1;
       background: #fff;
       border-radius: var(--border-radius);
       box-shadow: 0 4px 8px rgba(0,0,0,0.05);
       padding: 20px;
-      min-height: 200px;
       position: relative;
       overflow: auto;
     }
@@ -87,16 +99,58 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #output img, #output video, #output canvas {
+    #output img, #output video, #output canvas, #output audio {
       max-width: 100%;
       border-radius: var(--border-radius);
       margin-bottom: 16px;
     }
-    #output video { width: 100%; height: auto; }
-    #download-link { display: inline-block; margin-top: 16px; text-decoration: none;
-      font-weight: 500; color: var(--primary); transition: color var(--transition); }
-    #download-link:hover { color: #357abd; }
-    @media (max-width: 480px) {
+    #output video, #output audio {
+      width: 100%;
+      height: auto;
+    }
+    #sidebar {
+      width: 200px;
+    }
+    #sidebar h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    #recent-list {
+      list-style: none;
+      padding: 0;
+    }
+    #recent-list li {
+      background: #fff;
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: var(--border-radius);
+      font-size: 0.9rem;
+      word-break: break-all;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    #recent-list li:hover {
+      background: #f0f3f5;
+    }
+    footer {
+      text-align: center;
+      margin-top: 20px;
+    }
+    footer div {
+      margin-bottom: 4px;
+    }
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+      margin: 0 8px;
+      transition: color var(--transition);
+    }
+    footer a:hover {
+      color: #357abd;
+    }
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      #sidebar { width: 100%; margin-top: 20px; }
       #controls { flex-direction: column; }
       button { width: 100%; }
     }
@@ -104,13 +158,25 @@
 </head>
 <body>
   <h1>IPFS Viewer</h1>
-  <div id="controls">
-    <input type="text" id="cid-input" placeholder="Voer IPFS CID in..." />
-    <button id="load-btn">Laad</button>
+  <div class="container">
+    <div id="main">
+      <div id="controls">
+        <input type="text" id="cid-input" placeholder="Voer IPFS CID in..." />
+        <button id="load-btn">Laad</button>
+      </div>
+      <div id="output">Voer een CID in en klik op 'Laad' om content op te halen.</div>
+      <a id="download-link" href="#" download style="display:none;">⬇️ Download bestand</a>
+    </div>
+    <aside id="sidebar">
+      <h2>Recente CIDs</h2>
+      <ul id="recent-list"></ul>
+    </aside>
   </div>
-  <div id="output">Voer een CID in en klik op 'Laad' om content op te halen.</div>
-  <a id="download-link" href="#" download style="display:none;">⬇️ Download bestand</a>
-
+  <footer>
+    <div>Created by Zander</div>
+    <a href="https://github.com/zander/ipfs-viewer" target="_blank">GitHub Repo</a>
+    <a href="https://zander.dev" target="_blank">Website</a>
+  </footer>
   <script>
     // PDF.js worker instellen
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
@@ -120,26 +186,70 @@
       'https://gateway.pinata.cloud/ipfs/',
       'https://cloudflare-ipfs.com/ipfs/'
     ];
-
     const loadBtn = document.getElementById('load-btn');
     const cidInput = document.getElementById('cid-input');
     const output = document.getElementById('output');
     const downloadLink = document.getElementById('download-link');
+    const recentList = document.getElementById('recent-list');
+
+    // LocalStorage voor recente CIDs
+    let recentCIDs = JSON.parse(localStorage.getItem('recentCIDs') || '[]');
+    function renderRecent() {
+      recentList.innerHTML = '';
+      recentCIDs.slice(0,5).forEach(cid => {
+        const li = document.createElement('li');
+        li.textContent = cid;
+        li.addEventListener('click', () => { cidInput.value = cid; fetchContent(cid); });
+        recentList.appendChild(li);
+      });
+    }
+    renderRecent();
 
     loadBtn.addEventListener('click', () => {
       const cid = cidInput.value.trim();
       if (!cid) return;
       fetchContent(cid);
+      // Opslaan in recent CIDs
+      recentCIDs = [cid, ...recentCIDs.filter(c=>c!==cid)].slice(0,5);
+      localStorage.setItem('recentCIDs', JSON.stringify(recentCIDs));
+      renderRecent();
     });
+
+    // PDF rendering variabelen
+    let pdfDoc = null, currentPage = 1, totalPages = 0;
+    let pdfScale = 1.5;
+    let pdfUrl = '';
+
+    function setupPDFControls(canvas) {
+      const ctrl = document.createElement('div');
+      ctrl.style.marginBottom = '10px';
+      ctrl.innerHTML = `
+        <button id="prev">&#8592; Vorige</button>
+        <span>Pagina <input id="page-num" type="number" min="1" value="1" style="width:50px;"> / <span id="page-count">${totalPages}</span></span>
+        <button id="next">Volgende &#8594;</button>
+        <button id="zoom-in">+</button>
+        <button id="zoom-out">-</button>
+        <button id="print">Afdrukken</button>
+      `;
+      output.prepend(ctrl);
+
+      const pageNumInput = ctrl.querySelector('#page-num');
+      ctrl.querySelector('#prev').onclick = () => { if (currentPage>1) renderPage(currentPage-1); };
+      ctrl.querySelector('#next').onclick = () => { if (currentPage<totalPages) renderPage(currentPage+1); };
+      pageNumInput.onchange = () => { let p = parseInt(pageNumInput.value); if(p>=1 && p<=totalPages) renderPage(p); };
+      ctrl.querySelector('#zoom-in').onclick = () => { pdfScale += 0.25; renderPage(currentPage); };
+      ctrl.querySelector('#zoom-out').onclick = () => { pdfScale = Math.max(0.5, pdfScale-0.25); renderPage(currentPage); };
+      ctrl.querySelector('#print').onclick = () => { window.open(pdfUrl).print(); };
+    }
 
     async function fetchContent(cid) {
       output.innerHTML = '';
       output.classList.add('loading');
       downloadLink.style.display = 'none';
 
-      const controllers = gateways.map(() => new AbortController());
-      const promises = gateways.map((gw, i) =>
-        fetch(gw + cid, { signal: controllers[i].signal })
+      const controllers = gateways.map(()=>new AbortController());
+      const promises = gateways.map((gw,i) =>
+        fetch(gw+cid, { signal: controllers[i].signal })
           .then(res => res.ok
             ? res.blob().then(blob => ({ blob, ct: res.headers.get('Content-Type') }))
             : Promise.reject()
@@ -154,53 +264,50 @@
         output.textContent = '❌ Fout: content niet gevonden.';
         return;
       } finally {
-        controllers.forEach(c => c.abort());
+        controllers.forEach(c=>c.abort());
       }
 
       output.classList.remove('loading');
       const { blob, ct } = result;
-      const url = URL.createObjectURL(blob);
+      pdfUrl = URL.createObjectURL(blob);
 
       if (ct) {
         if (ct.startsWith('image/')) {
-          const img = document.createElement('img');
-          img.src = url;
-          output.appendChild(img);
+          const img = document.createElement('img'); img.src = pdfUrl; output.appendChild(img);
         } else if (ct === 'application/pdf') {
-          // PDF.js viewer
-          const canvas = document.createElement('canvas');
-          output.appendChild(canvas);
-          const loadingTask = pdfjsLib.getDocument(url);
-          loadingTask.promise.then(pdf => {
-            // Alleen de eerste pagina renderen
-            pdf.getPage(1).then(page => {
-              const viewport = page.getViewport({ scale: 1.5 });
-              canvas.height = viewport.height;
-              canvas.width = viewport.width;
-              const ctx = canvas.getContext('2d');
-              page.render({ canvasContext: ctx, viewport });
-            });
-          });
+          pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+          totalPages = pdfDoc.numPages; currentPage = 1; pdfScale = 1.5;
+          const canvas = document.createElement('canvas'); output.appendChild(canvas);
+          renderPage(currentPage, canvas);
+          setupPDFControls(canvas);
         } else if (ct.startsWith('video/')) {
-          const video = document.createElement('video');
-          video.controls = true;
-          // Ondersteun zoveel mogelijk video types via type attribuut
-          const source = document.createElement('source');
-          source.src = url;
-          source.type = ct;
-          video.appendChild(source);
-          output.appendChild(video);
+          const video = document.createElement('video'); video.controls = true;
+          ['mp4','webm','ogg'].forEach(() => {});
+          const source = document.createElement('source'); source.src = pdfUrl; source.type = ct;
+          video.appendChild(source); output.appendChild(video);
+        } else if (ct.startsWith('audio/')) {
+          const audio = document.createElement('audio'); audio.controls = true;
+          const source = document.createElement('source'); source.src = pdfUrl; source.type = ct;
+          audio.appendChild(source); output.appendChild(audio);
         } else {
-          const text = await blob.text();
-          const pre = document.createElement('pre');
-          pre.textContent = text;
-          output.appendChild(pre);
+          const text = await blob.text(); const pre = document.createElement('pre'); pre.textContent = text; output.appendChild(pre);
         }
       }
 
-      downloadLink.href = url;
+      downloadLink.href = pdfUrl;
       downloadLink.download = cid;
       downloadLink.style.display = 'inline-block';
+    }
+
+    async function renderPage(pageNum, canvas) {
+      currentPage = pageNum;
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: pdfScale });
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      page.render({ canvasContext: ctx, viewport });
+      document.getElementById('page-num').value = pageNum;
+      document.getElementById('page-count').textContent = totalPages;
     }
   </script>
 </body>
