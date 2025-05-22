@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IPFS Viewer</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- PDF.js library voor veilige PDF-weergave -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
   <style>
     :root {
       --primary: #4a90e2;
@@ -46,10 +48,7 @@
       font-size: 1rem;
       transition: border-color var(--transition);
     }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
+    input[type="text"]:focus { outline: none; border-color: var(--primary); }
     button {
       padding: 10px 16px;
       border: none;
@@ -60,9 +59,7 @@
       cursor: pointer;
       transition: background var(--transition);
     }
-    button:hover:not(:disabled) {
-      background: #357abd;
-    }
+    button:hover:not(:disabled) { background: #357abd; }
     button:disabled {
       background: #9bbde8;
       cursor: not-allowed;
@@ -90,31 +87,15 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #output img {
+    #output img, #output video, #output canvas {
       max-width: 100%;
-      height: auto;
       border-radius: var(--border-radius);
+      margin-bottom: 16px;
     }
-    #output pre {
-      white-space: pre-wrap;
-      font-family: 'Courier New', monospace;
-      background: #f0f3f5;
-      padding: 16px;
-      border-radius: var(--border-radius);
-      line-height: 1.5;
-      overflow-x: auto;
-    }
-    #download-link {
-      display: inline-block;
-      margin-top: 16px;
-      text-decoration: none;
-      font-weight: 500;
-      color: var(--primary);
-      transition: color var(--transition);
-    }
-    #download-link:hover {
-      color: #357abd;
-    }
+    #output video { width: 100%; height: auto; }
+    #download-link { display: inline-block; margin-top: 16px; text-decoration: none;
+      font-weight: 500; color: var(--primary); transition: color var(--transition); }
+    #download-link:hover { color: #357abd; }
     @media (max-width: 480px) {
       #controls { flex-direction: column; }
       button { width: 100%; }
@@ -131,6 +112,9 @@
   <a id="download-link" href="#" download style="display:none;">⬇️ Download bestand</a>
 
   <script>
+    // PDF.js worker instellen
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+
     const gateways = [
       'https://ipfs.io/ipfs/',
       'https://gateway.pinata.cloud/ipfs/',
@@ -149,14 +133,17 @@
     });
 
     async function fetchContent(cid) {
-      output.textContent = '';
+      output.innerHTML = '';
       output.classList.add('loading');
       downloadLink.style.display = 'none';
 
       const controllers = gateways.map(() => new AbortController());
       const promises = gateways.map((gw, i) =>
         fetch(gw + cid, { signal: controllers[i].signal })
-          .then(res => res.ok ? res.blob().then(blob => ({ blob, ct: res.headers.get('Content-Type') })) : Promise.reject())
+          .then(res => res.ok
+            ? res.blob().then(blob => ({ blob, ct: res.headers.get('Content-Type') }))
+            : Promise.reject()
+          )
       );
 
       let result;
@@ -174,15 +161,41 @@
       const { blob, ct } = result;
       const url = URL.createObjectURL(blob);
 
-      if (ct && ct.startsWith('image/')) {
-        const img = document.createElement('img');
-        img.src = url;
-        output.appendChild(img);
-      } else {
-        const text = await blob.text();
-        const pre = document.createElement('pre');
-        pre.textContent = text;
-        output.appendChild(pre);
+      if (ct) {
+        if (ct.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = url;
+          output.appendChild(img);
+        } else if (ct === 'application/pdf') {
+          // PDF.js viewer
+          const canvas = document.createElement('canvas');
+          output.appendChild(canvas);
+          const loadingTask = pdfjsLib.getDocument(url);
+          loadingTask.promise.then(pdf => {
+            // Alleen de eerste pagina renderen
+            pdf.getPage(1).then(page => {
+              const viewport = page.getViewport({ scale: 1.5 });
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+              const ctx = canvas.getContext('2d');
+              page.render({ canvasContext: ctx, viewport });
+            });
+          });
+        } else if (ct.startsWith('video/')) {
+          const video = document.createElement('video');
+          video.controls = true;
+          // Ondersteun zoveel mogelijk video types via type attribuut
+          const source = document.createElement('source');
+          source.src = url;
+          source.type = ct;
+          video.appendChild(source);
+          output.appendChild(video);
+        } else {
+          const text = await blob.text();
+          const pre = document.createElement('pre');
+          pre.textContent = text;
+          output.appendChild(pre);
+        }
       }
 
       downloadLink.href = url;
