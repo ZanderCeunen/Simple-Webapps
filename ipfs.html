@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IPFS Viewer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
   <style>
     :root {
@@ -27,7 +27,7 @@
     }
 
     body {
-      font-family: 'Inter', 'Roboto', sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--light);
       color: var(--text);
       line-height: 1.6;
@@ -36,7 +36,7 @@
     }
 
     @supports (font-variation-settings: normal) {
-      body { font-family: 'Inter var', 'Roboto', sans-serif; }
+      body { font-family: 'Inter var', sans-serif; }
     }
 
     h1 {
@@ -72,13 +72,22 @@
       height: min-content;
       position: sticky;
       top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
 
-    #sidebar h3 {
+    .sidebar-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sidebar-section h3 {
       font-size: 1.125rem;
       font-weight: 600;
       color: var(--dark);
-      margin-bottom: 1.25rem;
+      margin-bottom: 0.5rem;
       padding-bottom: 0.75rem;
       border-bottom: 2px solid #e2e8f0;
     }
@@ -190,7 +199,7 @@
     }
 
     #download-link {
-      margin-top: 1.5rem;
+      width: 100%;
       padding: 0.875rem 1.5rem;
       background: var(--primary);
       color: white;
@@ -198,8 +207,10 @@
       border-radius: var(--border-radius);
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
       transition: var(--transition);
+      order: -1;
     }
 
     #download-link:hover {
@@ -208,9 +219,16 @@
       box-shadow: var(--shadow);
     }
 
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
     .recent-item {
       padding: 0.75rem 1rem;
-      margin-bottom: 0.5rem;
       background: #f8fafc;
       border-radius: 8px;
       cursor: pointer;
@@ -219,7 +237,9 @@
       color: var(--text);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: space-between;
+      gap: 1rem;
+      overflow: hidden;
     }
 
     .recent-item:hover {
@@ -227,9 +247,16 @@
       transform: translateX(4px);
     }
 
-    .recent-item::before {
-      content: '🕒';
-      opacity: 0.6;
+    .recent-item span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recent-item time {
+      font-size: 0.75rem;
+      color: #64748b;
+      flex-shrink: 0;
     }
 
     footer {
@@ -258,6 +285,7 @@
       
       #sidebar {
         position: static;
+        order: -1;
       }
       
       h1 {
@@ -275,11 +303,15 @@
         <button id="load-btn">Laad</button>
       </div>
       <div id="output">Voer een CID in en klik op 'Laad'.</div>
-      <a id="download-link" href="#" download style="display:none;">⬇️ Download</a>
     </div>
     <div id="sidebar">
-      <h3>Laatst bekeken</h3>
-      <div id="recent-cids"></div>
+      <div class="sidebar-section">
+        <a id="download-link" href="#" download style="display:none;">⬇️ Bestand downloaden</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Laatst bekeken</h3>
+        <div class="recent-list" id="recent-cids"></div>
+      </div>
     </div>
   </div>
   <footer>
@@ -313,7 +345,7 @@
 
     function addToRecent(cid) {
       let recent = JSON.parse(localStorage.getItem('recentCIDs')) || [];
-      recent = [cid, ...recent.filter(c => c !== cid)].slice(0, 5);
+      recent = [{ cid, timestamp: new Date().toISOString() }, ...recent.filter(c => c.cid !== cid)].slice(0, 8);
       localStorage.setItem('recentCIDs', JSON.stringify(recent));
       renderRecent();
     }
@@ -321,13 +353,16 @@
     function renderRecent() {
       recentCIDsContainer.innerHTML = '';
       const recent = JSON.parse(localStorage.getItem('recentCIDs')) || [];
-      recent.forEach(cid => {
+      recent.forEach(item => {
         const div = document.createElement('div');
-        div.textContent = cid;
         div.className = 'recent-item';
+        div.innerHTML = `
+          <span title="${item.cid}">${item.cid}</span>
+          <time>${new Date(item.timestamp).toLocaleTimeString()}</time>
+        `;
         div.onclick = () => {
-          cidInput.value = cid;
-          fetchContent(cid);
+          cidInput.value = item.cid;
+          fetchContent(item.cid);
         };
         recentCIDsContainer.appendChild(div);
       });
@@ -392,7 +427,7 @@
 
       downloadLink.href = url;
       downloadLink.download = cid;
-      downloadLink.style.display = 'inline-block';
+      downloadLink.style.display = 'flex';
     }
 
     function setupPDFViewer(url) {
@@ -461,6 +496,7 @@
       });
     }
 
+    // Initial render
     renderRecent();
   </script>
 </body>
