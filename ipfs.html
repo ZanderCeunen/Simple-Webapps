@@ -376,9 +376,13 @@
       const controllers = gateways.map(() => new AbortController());
       const promises = gateways.map((gw, i) =>
         fetch(gw + cid, { signal: controllers[i].signal })
-          .then(res => res.ok
-            ? res.blob().then(blob => ({ blob, ct: res.headers.get('Content-Type') }))
-            : Promise.reject())
+          .then(res => {
+            if (!res.ok) return Promise.reject();
+            return res.blob().then(blob => ({
+              blob,
+              ct: res.headers.get('Content-Type') || ''
+            }));
+          })
       );
 
       let result;
@@ -400,34 +404,36 @@
         const img = document.createElement('img');
         img.src = url;
         output.appendChild(img);
+
       } else if (ct === 'application/pdf') {
         setupPDFViewer(url);
+
       } else if (ct.startsWith('video/')) {
         const video = document.createElement('video');
         video.controls = true;
-        const source = document.createElement('source');
-        source.src = url;
-        source.type = ct;
-        video.appendChild(source);
+        video.src = url;
+        video.type = ct;
         output.appendChild(video);
+
       } else if (ct.startsWith('audio/')) {
         const audio = document.createElement('audio');
         audio.controls = true;
-        const source = document.createElement('source');
-        source.src = url;
-        source.type = ct;
-        audio.appendChild(source);
+        audio.src = url;
+        audio.type = ct;
         output.appendChild(audio);
+
       } else {
-        const text = await blob.text();
-        const pre = document.createElement('pre');
-        pre.textContent = text;
-        output.appendChild(pre);
+        const warning = document.createElement('div');
+        warning.textContent = '⚠️ Niet in-browser te laden bestandstype.';
+        warning.style.padding = '1em';
+        warning.style.background = '#fee';
+        warning.style.border = '1px solid #f99';
+        output.appendChild(warning);
       }
 
       downloadLink.href = url;
       downloadLink.download = cid;
-      downloadLink.style.display = 'flex';
+      downloadLink.style.display = 'inline-flex';
     }
 
     function setupPDFViewer(url) {
@@ -459,10 +465,10 @@
       controls.querySelector('#next-page').onclick = () => {
         if (currentPage < pdfDoc.numPages) renderPage(++currentPage);
       };
-      controls.querySelector('#page-num').onchange = (e) => {
-        let page = parseInt(e.target.value);
-        if (page >= 1 && page <= pdfDoc.numPages) {
-          currentPage = page;
+      controls.querySelector('#page-num').onchange = e => {
+        const p = parseInt(e.target.value, 10);
+        if (p >= 1 && p <= pdfDoc.numPages) {
+          currentPage = p;
           renderPage(currentPage);
         }
       };
@@ -488,10 +494,9 @@
     function renderPage(pageNum) {
       pdfDoc.getPage(pageNum).then(page => {
         const viewport = page.getViewport({ scale });
-        pdfCanvas.height = viewport.height;
         pdfCanvas.width = viewport.width;
-        const renderCtx = { canvasContext: pdfCtx, viewport };
-        page.render(renderCtx);
+        pdfCanvas.height = viewport.height;
+        page.render({ canvasContext: pdfCtx, viewport });
         document.getElementById('page-num').value = pageNum;
       });
     }
