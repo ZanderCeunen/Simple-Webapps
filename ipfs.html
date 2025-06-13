@@ -368,6 +368,18 @@
       });
     }
 
+    function getFilenameFromHeaders(headers, cid) {
+      const contentDisposition = headers.get('Content-Disposition');
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=]*=([^;\n]*|'[^']*'|"[^"]*")/i);
+        if (filenameMatch && filenameMatch[1]) {
+          return filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      // Fallback to CID if no filename found
+      return cid;
+    }
+
     async function fetchContent(cid) {
       output.innerHTML = '';
       output.classList.add('loading');
@@ -380,7 +392,8 @@
             if (!res.ok) return Promise.reject();
             return res.blob().then(blob => ({
               blob,
-              ct: res.headers.get('Content-Type') || ''
+              ct: res.headers.get('Content-Type') || '',
+              filename: getFilenameFromHeaders(res.headers, cid)
             }));
           })
       );
@@ -397,7 +410,7 @@
       }
 
       output.classList.remove('loading');
-      const { blob, ct } = result;
+      const { blob, ct, filename } = result;
       const url = URL.createObjectURL(blob);
 
       if (ct.startsWith('image/')) {
@@ -432,7 +445,7 @@
       }
 
       downloadLink.href = url;
-      downloadLink.download = cid;
+      downloadLink.download = filename;
       downloadLink.style.display = 'inline-flex';
     }
 
